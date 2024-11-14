@@ -315,8 +315,8 @@ def getDialog(wss, id):
 
 
 if __name__ == '__main__':
+    if not app.secret_key:
+        app.secret_key = "kefN@oaiwadsdasda"
     app.run(port=8000, debug=True)
-    # http_server = WSGIServer(('127.0.0.1', 8000), app)
-    # print("The server is running on 127.0.0.1:8000")
-    # http_server.serve_forever()
+
 
