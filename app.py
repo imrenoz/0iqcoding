@@ -23,7 +23,7 @@ app.config['SELECTED'] = {}
 app.config['AES_KEY'] = "abcdefghijklmnopqrstuvwxyz123456".encode() # Ключ для шифрования
 app.config['UPLOAD_FOLDER'] = './uploads' # Папка для загрузки файлов
 app.config['TEMP_FOLDER'] = './temp'  # Временная папка для файлов
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://udhbafn3qd4e5q:p996836d0f6d3dadd6f7e8e18fbf1b355d55728c99b8dca8ea207727e6b90b041@cd27da2sn4hj7h.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com:5432/da48gpvu11h91p'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('postgres://udhbafn3qd4e5q:p996836d0f6d3dadd6f7e8e18fbf1b355d55728c99b8dca8ea207727e6b90b041@cd27da2sn4hj7h.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com:5432/da48gpvu11h91p')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 WebSocket = Sock(app) # Инициализация WebSocket
