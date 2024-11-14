@@ -16,7 +16,7 @@ from database import engine, SessionLocal
 
 # Экземпляр Flask приложения
 app = Flask(__name__)
-app.secret_key = 'finalproject_aitu'
+app.secret_key = 'kefN@oaiwadsdasda'
 app.config['SOCK_SERVER_OPTIONS'] = {'ping_interval': 25}
 app.config['OUTER_WS'] = {}
 app.config['INNER_WS'] = {}
@@ -315,7 +315,6 @@ def getDialog(wss, id):
 
 
 if __name__ == '__main__':
-    app.secret_key = "kefN@oaiwadsdasda"
     app.run(port=8000, debug=True)
     # http_server = WSGIServer(('127.0.0.1', 8000), app)
     # print("The server is running on 127.0.0.1:8000")
