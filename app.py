@@ -23,7 +23,7 @@ app.config['SELECTED'] = {}
 app.config['AES_KEY'] = "abcdefghijklmnopqrstuvwxyz123456".encode() # Ключ для шифрования
 app.config['UPLOAD_FOLDER'] = './uploads' # Папка для загрузки файлов
 app.config['TEMP_FOLDER'] = './temp'  # Временная папка для файлов
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("postgres://default:ow7inYkHSx0q@ep-withered-thunder-a4x22ce1.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 WebSocket = Sock(app) # Инициализация WebSocket
