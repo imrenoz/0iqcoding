@@ -230,6 +230,7 @@ def updateSession():
     session.modified = True
 
 # WebSocket для обмена сообщениями
+# WebSocket для обмена сообщениями
 @WebSocket.route('/<id>')
 def sendMessage(ws, id):
     global chats
@@ -240,17 +241,39 @@ def sendMessage(ws, id):
     clients[id] = ws
     if private.get(id) is not None:
         private.pop(id)
+        
     while True:
-        message = ws.receive()
-        message = json.loads(message)
-        if message['action'] == "connected":
-            companions, updatedChat = service.getUserCompanions(db, id, chats, app.config['AES_KEY'])
-            chats = updatedChat
-            ws.send(f"companions|{json.dumps(companions)}")
-        if message['action'] == "search":
-            if message['message'] != "":
-                people = service.getUsersLike(db, f"%{message['message']}%")
-                ws.send(f"users|{json.dumps(people)}")
+        try:
+            message = ws.receive()
+            message = json.loads(message)
+
+            if message['action'] == "connected":
+                # Получение списка собеседников
+                companions, updatedChat = service.getUserCompanions(db, id, chats, app.config['AES_KEY'])
+                chats = updatedChat
+                ws.send(f"companions|{json.dumps(companions)}")
+
+            elif message['action'] == "search":
+                search_query = message['message'].strip()
+                if search_query:
+                    # Обновляем получение пользователей с дополнительной фильтрацией
+                    people = service.getUsersLike(db, f"%{search_query}%", exclude_user_id=id)
+                    if people:
+                        ws.send(f"users|{json.dumps(people)}")
+                    else:
+                        ws.send("users|[]")  # Отправка пустого списка, если никого не найдено
+                else:
+                    ws.send("users|[]")  # Отправка пустого списка, если запрос пустой
+        except Exception as e:
+            print(f"Error in WebSocket connection: {e}")
+            break
+
+# В сервисе добавьте `exclude_user_id` для исключения текущего пользователя из результатов поиска
+def getUsersLike(db, search_pattern, exclude_user_id=None):
+    query = db.query(models.User).filter(models.User.username.ilike(search_pattern))
+    if exclude_user_id:
+        query = query.filter(models.User.id != exclude_user_id)  # Исключение текущего пользователя
+    return query.all()
 
 # WebSocket для получения диалога
 @WebSocket.route('/private/<id>')
