@@ -18,14 +18,12 @@ from database import engine, SessionLocal
 app = Flask(__name__)
 app.config['SOCK_SERVER_OPTIONS'] = {'ping_interval': 25}
 app.config['OUTER_WS'] = {}
-app.secret_key = 'finalproject_aitu'
 app.config['INNER_WS'] = {}
 app.config['SELECTED'] = {}
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("postgres://default:nRZIbqiPp0g8@ep-spring-cell-a4gw15l7.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require")
 app.config['AES_KEY'] = "abcdefghijklmnopqrstuvwxyz123456".encode() # Ключ для шифрования
 app.config['UPLOAD_FOLDER'] = './uploads' # Папка для загрузки файлов
 app.config['TEMP_FOLDER'] = './temp'  # Временная папка для файлов
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("postgres://default:nRZIbqiPp0g8@ep-spring-cell-a4gw15l7.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require")
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 WebSocket = Sock(app) # Инициализация WebSocket
 models.Base.metadata.create_all(bind=engine) # Создание таблиц в базе данных
@@ -230,7 +228,6 @@ def updateSession():
     session.modified = True
 
 # WebSocket для обмена сообщениями
-# WebSocket для обмена сообщениями
 @WebSocket.route('/<id>')
 def sendMessage(ws, id):
     global chats
@@ -241,39 +238,17 @@ def sendMessage(ws, id):
     clients[id] = ws
     if private.get(id) is not None:
         private.pop(id)
-        
     while True:
-        try:
-            message = ws.receive()
-            message = json.loads(message)
-
-            if message['action'] == "connected":
-                # Получение списка собеседников
-                companions, updatedChat = service.getUserCompanions(db, id, chats, app.config['AES_KEY'])
-                chats = updatedChat
-                ws.send(f"companions|{json.dumps(companions)}")
-
-            elif message['action'] == "search":
-                search_query = message['message'].strip()
-                if search_query:
-                    # Обновляем получение пользователей с дополнительной фильтрацией
-                    people = service.getUsersLike(db, f"%{search_query}%", exclude_user_id=id)
-                    if people:
-                        ws.send(f"users|{json.dumps(people)}")
-                    else:
-                        ws.send("users|[]")  # Отправка пустого списка, если никого не найдено
-                else:
-                    ws.send("users|[]")  # Отправка пустого списка, если запрос пустой
-        except Exception as e:
-            print(f"Error in WebSocket connection: {e}")
-            break
-
-# В сервисе добавьте `exclude_user_id` для исключения текущего пользователя из результатов поиска
-def getUsersLike(db, search_pattern, exclude_user_id=None):
-    query = db.query(models.User).filter(models.User.username.ilike(search_pattern))
-    if exclude_user_id:
-        query = query.filter(models.User.id != exclude_user_id)  # Исключение текущего пользователя
-    return query.all()
+        message = ws.receive()
+        message = json.loads(message)
+        if message['action'] == "connected":
+            companions, updatedChat = service.getUserCompanions(db, id, chats, app.config['AES_KEY'])
+            chats = updatedChat
+            ws.send(f"companions|{json.dumps(companions)}")
+        if message['action'] == "search":
+            if message['message'] != "":
+                people = service.getUsersLike(db, f"%{message['message']}%")
+                ws.send(f"users|{json.dumps(people)}")
 
 # WebSocket для получения диалога
 @WebSocket.route('/private/<id>')
@@ -344,3 +319,4 @@ if __name__ == '__main__':
     # http_server = WSGIServer(('127.0.0.1', 8000), app)
     # print("The server is running on 127.0.0.1:8000")
     # http_server.serve_forever()
+
