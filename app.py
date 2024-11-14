@@ -18,6 +18,7 @@ from database import engine, SessionLocal
 app = Flask(__name__)
 app.config['SOCK_SERVER_OPTIONS'] = {'ping_interval': 25}
 app.config['OUTER_WS'] = {}
+app.secret_key = 'finalproject_aitu'
 app.config['INNER_WS'] = {}
 app.config['SELECTED'] = {}
 app.config['AES_KEY'] = "abcdefghijklmnopqrstuvwxyz123456".encode() # Ключ для шифрования
