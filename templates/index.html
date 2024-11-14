@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Services{% endblock %}
+
+{% block content %}
+    <style>
+        .welcome-text {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #0056b3;
+            text-align: center;
+        }
+        .network-title {
+            font-size: 3rem;  /* Увеличенный размер шрифта */
+            color: #333;
+            text-align: center;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .network-subtitle {
+            font-size: 1rem;
+            color: #6c757d;
+            text-align: center;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        .footer-text {
+            font-size: 1rem;
+            color: #6c757d;
+            text-align: center;
+            position: fixed;
+            bottom: 10px;
+            width: 100%;
+        }
+        .image-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .network-image {
+            width: 100%;  /* или задайте фиксированную ширину, например, 500px */
+            max-width: 500px; /* Ограничение по ширине */
+            height: auto;
+        }
+    </style>
+    
+    <div class="info vw-100">
+        <div class="row mx-auto mt-3 col-5">
+            <p class="welcome-text">Welcome, {{ user['username'] }}!</p>
+        </div>
+        <div class="row col-12 mt-3 mx-auto">
+            <p class="network-title">Encrypted Social Network</p>
+        </div>
+        
+        <!-- Добавление изображения -->
+        <div class="image-container">
+            <img src="{{ url_for('static', filename='aitu-logo.png') }}" alt="Description of image" class="network-image">
+        </div>
+    </div>
+
+    <div class="footer-text">
+        <p>⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀Nothing on the internet is anonymous, but we're as close to it as we can get</p>
+    </div>
+{% endblock %}
