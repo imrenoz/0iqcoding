@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+        <!-- Устанавливает тип документа HTML и язык страницы как английский -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
+
+    <title>Login</title>
+</head>
+<body>
+    <div class="container">
+        <h2 class="col-6 mx-auto">Login</h2>
+        <form method="post" class="col-6 mx-auto">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary col-6">Login</button>
+            <p>Don't have an account? <a href="/register">Register</a></p>
+            {% if warning %}
+                <p class="text-danger">{{ warning }}</p>
+            {% endif %}
+        </form>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</body>
+</html>
