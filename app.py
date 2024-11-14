@@ -16,7 +16,7 @@ from database import engine, SessionLocal
 
 # Экземпляр Flask приложения
 app = Flask(__name__)
-app.secret_key = 'kefN@oaiwadsdasda'
+app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')
 app.config['SOCK_SERVER_OPTIONS'] = {'ping_interval': 25}
 app.config['OUTER_WS'] = {}
 app.config['INNER_WS'] = {}
