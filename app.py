@@ -1,7 +1,6 @@
 import io
 import json
 import os
-import tempfile
 from hashlib import sha256
 from io import BytesIO
 
@@ -137,7 +136,6 @@ def register():
         return redirect('/')
 
 
-
 @app.route('/upload_file', methods=['POST'])
 def upload_file():
     updateSession()
@@ -145,38 +143,36 @@ def upload_file():
     file = request.files.get('file')
     has_access_users = request.form.get('users')
     password = request.form.get('password')
-    
-    # Создайте временный файл для загрузки
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        temp_file.write(file.read())
-        temp_file_path = temp_file.name
-    
-    try:
-        # Шифруем файл и сохраняем его в базе данных
-        volume = crypto_methods.encrypt_file(temp_file_path, temp_file_path, createAesHash(password).encode())
-        newFile = models.File(
-            file_name=file.filename,
-            owner=user['id'],
-            volume=volume
-        )
-        newFile = service.addFile(db, newFile)
-        
-        # Добавляем доступ для пользователя
-        access = models.Access(file_id=newFile.id, user_id=user['id'])
-        db.add(access)
-        
-        if has_access_users:
-            for u in has_access_users:
-                access = models.Access(file_id=newFile.id, user_id=int(u))
-                db.add(access)
-        
-        db.commit()
-    finally:
-        # Удаляем временный файл
-        os.remove(temp_file_path)
+    upload = os.path.join(app.config.get('UPLOAD_FOLDER'), str(user['id']))
+    if not os.path.exists(upload):
+        os.mkdir(upload)
+    if file.filename != '':
+        try:
+            volume = crypto_methods.encrypt_file(file, os.path.join(upload, file.filename),
+                                                 createAesHash(password).encode())
+            newFile = models.File(
+                file_name=file.filename,
+                owner=user['id'],
+                volume=volume
+            )
+            newFile = service.addFile(db, newFile)
+            access = models.Access(
+                file_id=newFile.id,
+                user_id=user['id']
+            )
+            db.add(access)
+            if has_access_users:
+                for u in has_access_users:
+                    access = models.Access(
+                        file_id=newFile.id,
+                        user_id=int(u)
+                    )
+                    db.add(access)
+            db.commit()
+        except Exception as e:
+            print(e)
 
     return redirect('/storage')
-
 
 # Вспомогательная функция для хеширования пароля AES
 def createAesHash(password):
@@ -195,25 +191,16 @@ def download_file(id):
     access = service.getAccess(db, file.id, user['id'])
     if not access:
         abort(403)
-    
-    # Создайте временный файл для расшифровки
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        temp_file_path = temp_file.name
-        try:
-            # Расшифровка файла и сохранение его во временное хранилище
-            crypto_methods.decrypt_file(file.file_name, temp_file_path, createAesHash(password).encode())
-            
-            # Отправка файла пользователю и удаление после отправки
-            @after_this_request
-            def cleanup(response):
-                os.remove(temp_file_path)
-                return response
-            
-            return send_file(temp_file_path, as_attachment=True, download_name=file.file_name)
-        
-        except ValueError:
-            os.remove(temp_file_path)
-            abort(403)
+    uploads = os.path.join(app.config.get('UPLOAD_FOLDER'), str(file.owner))
+    temps = os.path.join(app.config.get('TEMP_FOLDER'), str(user['id']))
+    if not os.path.exists(temps):
+        os.mkdir(temps)
+    try:
+        crypto_methods.decrypt_file(os.path.join(uploads, file.file_name), os.path.join(temps, file.file_name),
+                                    createAesHash(password).encode())
+        return send_from_directory(temps, file.file_name, as_attachment=True)
+    except ValueError:
+        return send_from_directory(uploads, file.file_name, as_attachment=True)
 
 # Обработка ошибок 401 -Перенаправление на страницу входа
 @app.errorhandler(401)
