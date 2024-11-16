@@ -139,26 +139,26 @@ def register():
 @app.route('/upload_file', methods=['POST'])
 def upload_file():
     updateSession()
-    user = session.get('user')  # Получаем информацию о пользователе из сессии
-    file = request.files.get('file')  # Получаем файл из формы
-    has_access_users = request.form.get('users')  # Получаем список пользователей, которым предоставляется доступ
-    password = request.form.get('password')  # Получаем пароль для шифрования
+    user = session.get('user')
+    file = request.files.get('file')
+    has_access_users = request.form.getlist('users')  # Используем getlist для правильного получения списка пользователей
+    password = request.form.get('password')
 
-    # Используем временную директорию /tmp для загрузки файлов
+    # Используем временную директорию /tmp для загрузки
     upload = os.path.join('/tmp', str(user['id']))
     
     # Создаем директорию, если она не существует
     if not os.path.exists(upload):
         os.mkdir(upload)
 
-    # Проверяем, что файл был загружен
+    # Проверяем, что файл существует
     if file.filename != '':
         try:
-            # Зашифровываем файл и сохраняем его в директорию /tmp
+            # Зашифровываем файл и сохраняем его в /tmp директорию
             volume = crypto_methods.encrypt_file(file, os.path.join(upload, file.filename),
                                                  createAesHash(password).encode())
 
-            # Создаем объект нового файла для сохранения в базе данных
+            # Создаем объект нового файла
             newFile = models.File(
                 file_name=file.filename,
                 owner=user['id'],
@@ -174,23 +174,20 @@ def upload_file():
             )
             db.add(access)
 
-            # Если указаны другие пользователи для доступа, добавляем их в базу
+            # Добавляем доступ для других пользователей, если они указаны
             if has_access_users:
-                for u in has_access_users.split(','):  # Преобразуем строку в список пользователей
+                for u in has_access_users:
                     access = models.Access(
                         file_id=newFile.id,
-                        user_id=int(u.strip())  # Преобразуем ID пользователя в целое число
+                        user_id=int(u)
                     )
                     db.add(access)
             
-            # Подтверждаем изменения в базе данных
-            db.commit()
+            db.commit()  # Обязательно сохраняем изменения в базе данных
         except Exception as e:
             print(e)
-            # В случае ошибки откатываем изменения в базе данных
-            db.rollback()
 
-    return redirect('/storage')  # Перенаправляем на страницу хранилища файлов
+    return redirect('/storage')
 
 # Вспомогательная функция для хеширования пароля AES
 def createAesHash(password):
@@ -205,20 +202,21 @@ def download_file(id):
     updateSession()
     user = session.get('user')
     file = service.getFile(db, file_id=id)
-    password = request.args['password']
+    password = request.args.get('password')  # Используем get() для безопасного извлечения пароля
     
     if not file:
         abort(404)
     
+    # Проверяем, есть ли доступ у пользователя
     access = service.getAccess(db, file.id, user['id'])
     if not access:
         abort(403)
 
-    # Директория для загрузки файлов (сохраненные файлы находятся в основной директории /tmp/{user_id})
-    uploads = os.path.join('/tmp', str(file.owner))
+    # Директория для загрузки файлов
+    uploads = os.path.join(app.config.get('UPLOAD_FOLDER'), str(file.owner))
     
     # Временная директория для расшифровки
-    temps = os.path.join('/tmp', str(user['id']))
+    temps = os.path.join(app.config.get('TEMP_FOLDER'), str(user['id']))
     
     # Создаем временную директорию, если её нет
     if not os.path.exists(temps):
