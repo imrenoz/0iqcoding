@@ -220,11 +220,18 @@ def download_file(id):
     if not os.path.exists(temps):
         os.makedirs(temps)  # Используем os.makedirs, чтобы создать все необходимые каталоги, если их нет
     
+    file_path = os.path.join(uploads, file.file_name)  # Путь к файлу для расшифровки
+    temp_file_path = os.path.join(temps, file.file_name)  # Путь для расшифрованного файла
+
+    # Проверяем, существует ли файл в директории для загрузки
+    if not os.path.exists(file_path):
+        return f"File not found at {file_path}", 404
+
     try:
         # Пробуем расшифровать файл
         crypto_methods.decrypt_file(
-            os.path.join(uploads, file.file_name),
-            os.path.join(temps, file.file_name),
+            file_path,
+            temp_file_path,
             createAesHash(password).encode()
         )
         # Возвращаем расшифрованный файл
