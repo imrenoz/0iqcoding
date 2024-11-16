@@ -16,22 +16,62 @@ from database import engine, SessionLocal
 
 # Экземпляр Flask приложения
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')
+app.secret_key = os.getenv('SECRET_KEY', 'kefN@oaiwadsdasda')  # Постоянный ключ
 app.config['SOCK_SERVER_OPTIONS'] = {'ping_interval': 25}
 app.config['OUTER_WS'] = {}
 app.config['INNER_WS'] = {}
 app.config['SELECTED'] = {}
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("postgres://default:nRZIbqiPp0g8@ep-spring-cell-a4gw15l7.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require")
-app.config['AES_KEY'] = "abcdefghijklmnopqrstuvwxyz123456".encode() # Ключ для шифрования
-app.config['UPLOAD_FOLDER'] = './uploads' # Папка для загрузки файлов
-app.config['TEMP_FOLDER'] = './temp'  # Временная папка для файлов
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    "postgres://default:nRZIbqiPp0g8@ep-spring-cell-a4gw15l7.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require"
+)
+app.config['AES_KEY'] = "abcdefghijklmnopqrstuvwxyz123456".encode()
+app.config['UPLOAD_FOLDER'] = './uploads'
+app.config['TEMP_FOLDER'] = './temp'
 
-WebSocket = Sock(app) # Инициализация WebSocket
-models.Base.metadata.create_all(bind=engine) # Создание таблиц в базе данных
-db = SessionLocal() # Инициализация сессии базы данных
+WebSocket = Sock(app)
+models.Base.metadata.create_all(bind=engine)
+db = SessionLocal()
 
 chats = {}
 
+
+# Вспомогательная функция для отладки сессии
+@app.route('/debug_session')
+def debug_session():
+    return str(session)
+
+
+# Обновление сессии пользователя
+def updateSession():
+    try:
+        if session.get('user') is None:
+            print("Сессия отсутствует. Перенаправление на вход.")
+            abort(401)
+        else:
+            user_id = session.get('user').get('id')
+            rooms = app.config['INNER_WS']
+            if rooms.get(user_id):
+                rooms.pop(user_id)
+            user = service.getUserById(db, user_id)
+            if user is None:
+                print("Пользователь не найден. Очистка сессии.")
+                if session.get('login'):
+                    session.pop('login')
+                if session.get('user'):
+                    session.pop('user')
+                session.modified = True
+                abort(401)
+
+            session['user'] = user.getInfo()
+        session.modified = True
+    except Exception as e:
+        print(f"Ошибка при обновлении сессии: {e}")
+        abort(401)
+
+
+@app.errorhandler(401)
+def redirectToLogin(error):
+    return redirect('/login?warning=authorize')
 
 @app.route('/')
 def main():
@@ -315,8 +355,6 @@ def getDialog(wss, id):
 
 
 if __name__ == '__main__':
-    if not app.secret_key:
-        app.secret_key = "kefN@oaiwadsdasda"
     app.run(port=8000, debug=True)
 
 
