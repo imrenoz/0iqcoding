@@ -24,8 +24,8 @@ app.config['INNER_WS'] = {}
 app.config['SELECTED'] = {}
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("postgres://default:nRZIbqiPp0g8@ep-spring-cell-a4gw15l7.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require")
 app.config['AES_KEY'] = "abcdefghijklmnopqrstuvwxyz123456".encode() # Ключ для шифрования
-app.config['UPLOAD_FOLDER'] = './uploads' # Папка для загрузки файлов
-app.config['TEMP_FOLDER'] = './temp'  # Временная папка для файлов
+app.config['UPLOAD_FOLDER'] = 'tmp/uploads' # Папка для загрузки файлов
+app.config['TEMP_FOLDER'] = '/tmp/temp/'  # Временная папка для файлов
 
 WebSocket = Sock(app) # Инициализация WebSocket
 models.Base.metadata.create_all(bind=engine) # Создание таблиц в базе данных
@@ -143,24 +143,38 @@ def upload_file():
     file = request.files.get('file')
     has_access_users = request.form.get('users')
     password = request.form.get('password')
-    upload = os.path.join(app.config.get('UPLOAD_FOLDER'), str(user['id']))
+
+    # Используем временную директорию /tmp для загрузки
+    upload = os.path.join('/tmp', str(user['id']))
+    
+    # Создаем директорию, если она не существует
     if not os.path.exists(upload):
         os.mkdir(upload)
+
+    # Проверяем, что файл существует
     if file.filename != '':
         try:
+            # Зашифровываем файл и сохраняем его в /tmp директорию
             volume = crypto_methods.encrypt_file(file, os.path.join(upload, file.filename),
                                                  createAesHash(password).encode())
+
+            # Создаем объект нового файла
             newFile = models.File(
                 file_name=file.filename,
                 owner=user['id'],
                 volume=volume
             )
+            # Добавляем файл в базу данных
             newFile = service.addFile(db, newFile)
+
+            # Создаем объект доступа для владельца файла
             access = models.Access(
                 file_id=newFile.id,
                 user_id=user['id']
             )
             db.add(access)
+
+            # Добавляем доступ для других пользователей, если они указаны
             if has_access_users:
                 for u in has_access_users:
                     access = models.Access(
