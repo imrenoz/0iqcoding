@@ -34,21 +34,6 @@ db = SessionLocal()
 
 chats = {}
 
-
-# Вспомогательная функция для отладки сессии
-@app.route('/debug_session')
-def debug_session():
-    return str(session)
-
-@app.route('/clear_session')
-def clear_session():
-    session.clear()
-    return "Сессия очищена."
-
-@app.route('/debug_session')
-def debug_session():
-    return str(session)
-
 # Обновление сессии пользователя
 def updateSession():
     try:
