@@ -194,26 +194,43 @@ def createAesHash(password):
     return hashed_pass[0:32]
 
 
-@app.route('/download/<id>')
+
+
+@app.route('/download/<id>', methods=['GET'])
 def download_file(id):
     updateSession()
     user = session.get('user')
     file = service.getFile(db, file_id=id)
     password = request.args['password']
+    
     if not file:
         abort(404)
+    
     access = service.getAccess(db, file.id, user['id'])
     if not access:
         abort(403)
+
+    # Директория для загрузки файлов
     uploads = os.path.join(app.config.get('UPLOAD_FOLDER'), str(file.owner))
+    
+    # Временная директория для расшифровки
     temps = os.path.join(app.config.get('TEMP_FOLDER'), str(user['id']))
+    
+    # Создаем временную директорию, если её нет
     if not os.path.exists(temps):
-        os.mkdir(temps)
+        os.makedirs(temps)  # Используем os.makedirs, чтобы создать все необходимые каталоги, если их нет
+    
     try:
-        crypto_methods.decrypt_file(os.path.join(uploads, file.file_name), os.path.join(temps, file.file_name),
-                                    createAesHash(password).encode())
+        # Пробуем расшифровать файл
+        crypto_methods.decrypt_file(
+            os.path.join(uploads, file.file_name),
+            os.path.join(temps, file.file_name),
+            createAesHash(password).encode()
+        )
+        # Возвращаем расшифрованный файл
         return send_from_directory(temps, file.file_name, as_attachment=True)
     except ValueError:
+        # Если ошибка расшифровки, возвращаем исходный файл
         return send_from_directory(uploads, file.file_name, as_attachment=True)
 
 # Обработка ошибок 401 -Перенаправление на страницу входа
