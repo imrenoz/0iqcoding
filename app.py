@@ -24,7 +24,7 @@ app.config['INNER_WS'] = {}
 app.config['SELECTED'] = {}
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("postgres://default:nRZIbqiPp0g8@ep-spring-cell-a4gw15l7.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require")
 app.config['AES_KEY'] = "abcdefghijklmnopqrstuvwxyz123456".encode() # Ключ для шифрования
-app.config['UPLOAD_FOLDER'] = 'tmp/uploads' # Папка для загрузки файлов
+app.config['UPLOAD_FOLDER'] = 'tmp/temp/' # Папка для загрузки файлов
 app.config['TEMP_FOLDER'] = '/tmp/temp/'  # Временная папка для файлов
 
 WebSocket = Sock(app) # Инициализация WebSocket
