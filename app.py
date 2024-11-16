@@ -20,9 +20,7 @@ app.config['SOCK_SERVER_OPTIONS'] = {'ping_interval': 25}
 app.config['OUTER_WS'] = {}
 app.config['INNER_WS'] = {}
 app.config['SELECTED'] = {}
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
-    "postgres://default:nRZIbqiPp0g8@ep-spring-cell-a4gw15l7.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require"
-)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("postgres://default:nRZIbqiPp0g8@ep-spring-cell-a4gw15l7.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require")
 app.config['AES_KEY'] = "abcdefghijklmnopqrstuvwxyz123456".encode()
 app.config['UPLOAD_FOLDER'] = './uploads'
 app.config['TEMP_FOLDER'] = './temp'
