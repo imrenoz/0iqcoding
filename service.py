@@ -8,6 +8,7 @@ import models # Модель базы данных
 
 # Получение пользователя по ID
 def getUserById(db: Session, user_id) -> models.User:
+    # Возможно, стоит использовать .filter(models.User.id == user_id)
     return db.query(models.User).filter_by(id=user_id).first()
 
 # Получение пользователя по имени
@@ -27,41 +28,49 @@ def addUser(db: Session, username, password):
 
 # Получение списка пользователя
 def getUserCompanions(db: Session, user_id, chats, aes_key):
-    sql = f"WITH cte AS ( SELECT message_id, LEAST(sender, receiver) AS user1, GREATEST(sender, receiver) AS user2, content, message_date, iv " \
-          f"FROM messages where sender = :s or receiver = :s), cte2 AS ( SELECT message_id, user1, user2, content, message_date, iv, ROW_NUMBER() OVER " \
-          f"(PARTITION BY user1, user2 ORDER BY message_id DESC) AS rn FROM cte) SELECT message_id, user1, user2, content, message_date, iv " \
-          f"FROM cte2 WHERE rn = 1 order by message_id desc;"
+    sql = f"""
+    WITH cte AS (
+        SELECT message_id, LEAST(sender, receiver) AS user1, GREATEST(sender, receiver) AS user2, 
+               content, message_date, iv
+        FROM messages 
+        WHERE sender = :s OR receiver = :s
+    ),
+    cte2 AS (
+        SELECT message_id, user1, user2, content, message_date, iv, 
+               ROW_NUMBER() OVER (PARTITION BY user1, user2 ORDER BY message_id DESC) AS rn 
+        FROM cte
+    )
+    SELECT message_id, user1, user2, content, message_date, iv 
+    FROM cte2 
+    WHERE rn = 1 
+    ORDER BY message_id DESC;
+    """
     try:
         companions = db.execute(text(sql), {'s': user_id})
-    except:
-        return getUserCompanions(db, user_id, chats)
+    except Exception as e:
+        print(e)
+        return getUserCompanions(db, user_id, chats)  # Рекурсивный вызов, если что-то пошло не так
     companions_json = []
     for companion in companions:
         date = companion[4]
-        if companion[1] not in chats.keys():
+        if companion[1] not in chats:
             sender = getUserById(db, companion[1])
             chats[companion[1]] = sender.username
-        if companion[2] not in chats.keys():
+        if companion[2] not in chats:
             receiver = getUserById(db, companion[2])
             chats[companion[2]] = receiver.username
-        if companion[1] != int(user_id):
-            companion_id = companion[1]
-            sender_id = companion[2]
-        else:
-            companion_id = companion[2]
-            sender_id = companion[1]
-        try:
-            unreadMessages = getChatUnreadMessagesNum(db, sender_id, companion_id)
-        except:
-            unreadMessages = 0
+        companion_id = companion[2] if companion[1] == user_id else companion[1]
+        sender_id = companion[1] if companion[1] != user_id else companion[2]
+        
+        unreadMessages = getChatUnreadMessagesNum(db, sender_id, companion_id)  # Можно обернуть в try-except
         message_date = f"{date.day}.{date.month}.{date.year} {date.hour}:{date.minute}:{date.second}"
-        print(companion)
         content = crypto_methods.decrypt_message(companion[3], aes_key, companion[5])
+        
         message = {
             "not_seen": unreadMessages,
             "companion_id": companion_id,
             "message_id": companion[0],
-            "companion_name": chats[companion[1]] if int(companion[1]) != int(user_id) else chats[companion[2]],
+            "companion_name": chats[companion[1]] if companion[1] != user_id else chats[companion[2]],
             "content": content,
             "message_date": f"{date.day}.{date.month}.{date.year}",
             "message_time": f"{date.hour}:{date.minute}:{date.second}",

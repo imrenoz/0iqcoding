@@ -3,33 +3,45 @@ import json
 import os
 from hashlib import sha256
 from io import BytesIO
-
+from dotenv import load_dotenv
 from flask import Flask, render_template, session, abort, redirect, request, send_from_directory, after_this_request, \
     url_for, send_file, Response
-from flask_sock import Sock # Подключение библиотеки для работы с WebSocket
+from flask_sock import Sock  # Подключение библиотеки для работы с WebSocket
 from gevent.pywsgi import WSGIServer
+from flask_cors import CORS  # Импортируем CORS
+
 from hashlib import sha256
 
 import models
+from models import User
 import service, crypto_methods
 from database import engine, SessionLocal
 
+load_dotenv()
+
 # Экземпляр Flask приложения
-app = Flask(__name__)
-app.secret_key = 'kefN@oaiwadsdasda'
-app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')
+app = Flask(__name__)  # Исправлено создание экземпляра Flask
+app.secret_key = os.getenv("SECRET_KEY")
+
+# Добавляем CORS
+CORS(app)  # Разрешаем все источники, или можно настроить выборочно
+
+# Проверка наличия AES_KEY в переменных окружения
+aes_key = os.getenv("AES_KEY")
+if aes_key is None:
+    raise ValueError("AES_KEY not set in .env file")  # Бросаем исключение, если переменная не найдена
+
+app.config['AES_KEY'] = aes_key.encode()  # Преобразуем ключ в байты
 app.config['SOCK_SERVER_OPTIONS'] = {'ping_interval': 25}
 app.config['OUTER_WS'] = {}
 app.config['INNER_WS'] = {}
 app.config['SELECTED'] = {}
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("postgres://default:nRZIbqiPp0g8@ep-spring-cell-a4gw15l7.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require")
-app.config['AES_KEY'] = "abcdefghijklmnopqrstuvwxyz123456".encode() # Ключ для шифрования
-app.config['UPLOAD_FOLDER'] = 'tmp/temp/' # Папка для загрузки файлов
-app.config['TEMP_FOLDER'] = '/tmp/temp/'  # Временная папка для файлов
+app.config['UPLOAD_FOLDER'] = './uploads'  # Папка для загрузки файлов
+app.config['TEMP_FOLDER'] = './temp'  # Временная папка для файлов
 
-WebSocket = Sock(app) # Инициализация WebSocket
-models.Base.metadata.create_all(bind=engine) # Создание таблиц в базе данных
-db = SessionLocal() # Инициализация сессии базы данных
+WebSocket = Sock(app)  # Инициализация WebSocket
+models.Base.metadata.create_all(bind=engine)  # Создание
+db = SessionLocal()  # Инициализация сессии базы данных
 
 chats = {}
 
@@ -45,7 +57,12 @@ def main():
 def chat():
     updateSession()
     user = session.get('user')
-    return render_template('chat.html', user=user)
+    if user:
+        # Получение списка доступных пользователей
+        users = service.getUsers(db, user['id'])
+        return render_template('chat.html', user=user, users=users)
+    else:
+        return redirect('/login')
 
 # Хранение файлов
 @app.route('/storage')
@@ -141,40 +158,26 @@ def upload_file():
     updateSession()
     user = session.get('user')
     file = request.files.get('file')
-    has_access_users = request.form.getlist('users')  # Используем getlist для правильного получения списка пользователей
+    has_access_users = request.form.get('users')
     password = request.form.get('password')
-
-    # Используем временную директорию /tmp для загрузки
-    upload = os.path.join('/tmp', str(user['id']))
-    
-    # Создаем директорию, если она не существует
+    upload = os.path.join(app.config.get('UPLOAD_FOLDER'), str(user['id']))
     if not os.path.exists(upload):
         os.mkdir(upload)
-
-    # Проверяем, что файл существует
     if file.filename != '':
         try:
-            # Зашифровываем файл и сохраняем его в /tmp директорию
             volume = crypto_methods.encrypt_file(file, os.path.join(upload, file.filename),
                                                  createAesHash(password).encode())
-
-            # Создаем объект нового файла
             newFile = models.File(
                 file_name=file.filename,
                 owner=user['id'],
                 volume=volume
             )
-            # Добавляем файл в базу данных
             newFile = service.addFile(db, newFile)
-
-            # Создаем объект доступа для владельца файла
             access = models.Access(
                 file_id=newFile.id,
                 user_id=user['id']
             )
             db.add(access)
-
-            # Добавляем доступ для других пользователей, если они указаны
             if has_access_users:
                 for u in has_access_users:
                     access = models.Access(
@@ -182,8 +185,7 @@ def upload_file():
                         user_id=int(u)
                     )
                     db.add(access)
-            
-            db.commit()  # Обязательно сохраняем изменения в базе данных
+            db.commit()
         except Exception as e:
             print(e)
 
@@ -191,55 +193,30 @@ def upload_file():
 
 # Вспомогательная функция для хеширования пароля AES
 def createAesHash(password):
-    # Хешируем пароль с использованием SHA256 и обрезаем до 32 символов для AES
-    hashed_pass = sha256(password.encode('utf-8')).hexdigest()
+    hashed_pass = sha256((password).encode('utf-8')).hexdigest()
     return hashed_pass[0:32]
 
 
-
-@app.route('/download/<id>', methods=['GET'])
+@app.route('/download/<id>')
 def download_file(id):
     updateSession()
     user = session.get('user')
     file = service.getFile(db, file_id=id)
-    password = request.args.get('password')  # Используем get() для безопасного извлечения пароля
-    
+    password = request.args['password']
     if not file:
         abort(404)
-    
-    # Проверяем, есть ли доступ у пользователя
     access = service.getAccess(db, file.id, user['id'])
     if not access:
         abort(403)
-
-    # Директория для загрузки файлов
     uploads = os.path.join(app.config.get('UPLOAD_FOLDER'), str(file.owner))
-    
-    # Временная директория для расшифровки
     temps = os.path.join(app.config.get('TEMP_FOLDER'), str(user['id']))
-    
-    # Создаем временную директорию, если её нет
     if not os.path.exists(temps):
-        os.makedirs(temps)  # Используем os.makedirs, чтобы создать все необходимые каталоги, если их нет
-    
-    file_path = os.path.join(uploads, file.file_name)  # Путь к файлу для расшифровки
-    temp_file_path = os.path.join(temps, file.file_name)  # Путь для расшифрованного файла
-
-    # Проверяем, существует ли файл в директории для загрузки
-    if not os.path.exists(file_path):
-        return f"File not found at {file_path}", 404
-
+        os.mkdir(temps)
     try:
-        # Пробуем расшифровать файл
-        crypto_methods.decrypt_file(
-            file_path,
-            temp_file_path,
-            createAesHash(password).encode()
-        )
-        # Возвращаем расшифрованный файл
+        crypto_methods.decrypt_file(os.path.join(uploads, file.file_name), os.path.join(temps, file.file_name),
+                                    createAesHash(password).encode())
         return send_from_directory(temps, file.file_name, as_attachment=True)
     except ValueError:
-        # Если ошибка расшифровки, возвращаем исходный файл
         return send_from_directory(uploads, file.file_name, as_attachment=True)
 
 # Обработка ошибок 401 -Перенаправление на страницу входа
@@ -267,6 +244,8 @@ def updateSession():
             abort(401)
 
         session['user'] = user.getInfo()
+
+    app.logger.debug(f"Current session: {session}")
     session.modified = True
 
 # WebSocket для обмена сообщениями
@@ -278,19 +257,60 @@ def sendMessage(ws, id):
     clients = app.config['OUTER_WS']
     private = app.config['SELECTED']
     clients[id] = ws
+
+    # Получаем ID пользователя из сессии Flask
+    user_id = session.get('user', {}).get('id')
+    if not user_id:
+        ws.send("error|User session expired.")
+        ws.close()
+        return
+
+    # Логика обработки поиска собеседника
     if private.get(id) is not None:
         private.pop(id)
     while True:
-        message = ws.receive()
-        message = json.loads(message)
-        if message['action'] == "connected":
-            companions, updatedChat = service.getUserCompanions(db, id, chats, app.config['AES_KEY'])
-            chats = updatedChat
-            ws.send(f"companions|{json.dumps(companions)}")
-        if message['action'] == "search":
-            if message['message'] != "":
-                people = service.getUsersLike(db, f"%{message['message']}%")
-                ws.send(f"users|{json.dumps(people)}")
+        try:
+            message = ws.receive()
+            message = json.loads(message)
+            print(f"Received message: {message}")
+
+            if message['action'] == "connected":
+                companions, updatedChat = service.getUserCompanions(db, id, chats, app.config['AES_KEY'])
+                chats = updatedChat
+                ws.send(f"companions|{json.dumps(companions)}")
+            elif message['action'] == "search":
+                if message['message'] != "":
+                    print(f"Searching for users with message: {message['message']}")
+                    people = service.getUsersLike(db, f"%{message['message']}%")
+                    print(f"Found users: {people}")
+                    ws.send(f"users|{json.dumps(people)}")
+        except Exception as e:
+            print(f"Error processing message: {e}")
+            continue
+
+@WebSocket.route('/search')
+def searchUsers(ws):
+    global chats
+    try:
+        while True:
+            message = ws.receive()
+            if message:
+                message = json.loads(message)
+                print(f"Received search request: {message}")
+
+                if message['action'] == "search":
+                    search_text = message['message']
+                    if search_text:
+                        print(f"Searching for users with message: {search_text}")
+                        users = service.getUsersLike(db, f"%{search_text}%")
+                        print(f"Found users: {users}")
+                        ws.send(f"users|{json.dumps(users)}")
+                    else:
+                        ws.send("error|Search text is empty")
+    except Exception as e:
+        print(f"Error in WebSocket search: {e}")
+        ws.send("error|An error occurred while processing your request.")
+        ws.close()
 
 # WebSocket для получения диалога
 @WebSocket.route('/private/<id>')
@@ -356,6 +376,5 @@ def getDialog(wss, id):
 
 
 if __name__ == '__main__':
-    if not app.secret_key:
-        app.secret_key = "kefN@oaiwadsdasda"
-    app.run(port=8000, debug=True)
+    app.run(debug=True)  # Flask автоматически настроит приложение на стандартный порт
+
