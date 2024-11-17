@@ -1,0 +1,132 @@
+{% extends 'base.html' %} {% block title %} Хранилище {% endblock %}
+{% block content %}
+    <div class="d-flex w-100 vh-100 bg-secondary bg-gradient">
+        <div class="container-fluid">
+            <div class="row mt-4">
+                <div class="col-5">
+                    <p class="h4 px-4 text-light">Storage
+                        <svg class="bi pe-none me-2" width="20" height="20">
+                            <use xlink:href="#file-earmark"></use>
+                        </svg>
+                    </p>
+                </div>
+                <div class="col-1">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadFile">
+                        Upload
+                    </button>
+
+                    <div class="modal fade" id="uploadFile" tabindex="-1" aria-labelledby="uploadFile"
+                         aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h1 class="modal-title fs-5" id="uploadFile1">Upload File</h1>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                            aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <form id="addFile" action="/upload_file" method="post"
+                                          enctype="multipart/form-data">
+                                        <input class="form-control mb-3" name="file" id="file" type="file"
+                                               accept=".doc, .docx, .pptx, .xlsx, .pdf">
+                                        <select class="form-select mb-3" name="users" id="users" size="3"
+                                                multiple>
+                                            <option selected disabled>Access to file</option>
+                                            {% for user in users %}
+                                                <option value="{{ user.id }}">{{ user.username }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <input class="form-control mb-3" name="password"
+                                               placeholder="Verification password" type="password" required>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                Close
+                                            </button>
+                                            <button class="btn btn-primary" type="submit">
+                                                Upload
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <hr>
+            <div class="row"
+                 style="border-radius: 25px; max-height: 85%; overflow: auto; scrollbar-width: none; -ms-overflow-style: none">
+                <table class="table table-striped bg-light bdr" style="width:96%; margin: 0 2%">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Filename</th>
+                        <th scope="col">Owner</th>
+                        <th scope="col">Volume</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for file in files %}
+                        <tr class="file" data-bs-toggle="modal" data-file-id="{{ file['file_id'] }}" data-file-name="{{ file['filename'] }}" data-bs-target="#downloadFile">
+                            <td>{{ loop.index }}</td>
+                            <td class="fileInfoName">
+                                <svg class="bi pe-none me-2" width="16" height="16">
+                                    <use xlink:href="#file-earmark"></use>
+                                </svg>
+                                {{ file['filename'] }}
+                            </td>
+                            <td>{{ file['owner'] }}</td>
+                            <td>{{ file['volume'] }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal fade" id="downloadFile" tabindex="-1" aria-labelledby="downloadFile"
+                 aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title fs-5" id="fileName">Download File</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="getFile" method="get">
+                                <input type="hidden" value="">
+                                <input class="form-control mb-3" name="password"
+                                       placeholder="Enter the password" id="getFilePassword" type="password" required>
+                                <div class="modal-footer">
+                                    <button type="button" id="closeModal" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        Close
+                                    </button>
+                                    <button class="btn btn-primary" type="submit">
+                                        Download
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+
+        let files = document.querySelectorAll('.file')
+        files.forEach((file) => {
+            file.addEventListener('click', () => {
+                document.querySelector('#fileName').innerHTML = file.attributes['data-file-name'].value
+                document.querySelector('#getFile').action = "/download/" + file.attributes['data-file-id'].value
+                document.querySelector('#getFilePassword').value = ""
+            })
+        })
+        let getFileForm = document.querySelector('#getFile')
+        getFileForm.addEventListener('submit',()=>{
+            let closeModal = document.querySelector('#closeModal')
+            closeModal.click()
+        })
+    </script>
+{% endblock %}
