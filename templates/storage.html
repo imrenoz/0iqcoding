@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Storage{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 col-xl-6 offset-xl-3 py-5">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    File Storage
+                </div>
+                <div class="card-body">
+                    <div id="fileList" class="mb-3">
+                        <!-- File list will go here -->
+                        {% for file in files %}
+                        <div class="file-item p-2 mb-2 border rounded">
+                            <a href="{{ url_for('download_file', id=file.file_id) }}">{{ file.file_name }}</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <form id="uploadForm" action="/upload_file" method="post" enctype="multipart/form-data">
+                        <div class="input-group">
+                            <div class="custom-file">
+                                <input id="fileInput" name="file" type="file" class="custom-file-input">
+                                <label class="custom-file-label" id="file_label" for="fileInput">Choose file</label>
+                            </div>
+                            <div class="input-group-append">
+                                <button class="btn btn-primary" type="submit">Upload</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <script>
+    let file_label = document.querySelector('#file_label')
+    let fileInput = document.querySelector('#fileInput')
+    fileInput.addEventListener('change', (e)=>{
+        if (e.target.files[0]) {
+            file_label.textContent = e.target.files[0].name
+        } else{
+            file_label.textContent = 'Choose file'
+        }
+    })
+    </script>
+{% endblock %}

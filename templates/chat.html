@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+{% block title %}Chat{% endblock %}
+
+{% block content %}
+    <div class="d-flex vh-100 bg-secondary bg-gradient" style="width: 80%">
+        <!-- Пользователи-->
+        <section style="background-color: #eee; width: 100%">
+            <div class="container-fluid">
+                <div class="row">
+                    <!-- Чаты -->
+                    <div class="col-4 bg-light min-vh-100"
+                         style="overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;">
+                        <h5 class="fw-bold mb-3 mt-3 text-center text-lg-start">Чат</h5>
+                        <div class="card">
+                            <div class="card-body" id="user-card">
+                                <div class="input-group rounded mb-3">
+                                    <input type="search" id="search_users" class="form-control rounded"
+                                           placeholder="Поиск"
+                                           aria-label="Search"
+                                           aria-describedby="search-addon"/>
+                                </div>
+                                <ul class="list-unstyled mb-0"
+                                    style="overflow: hidden; scrollbar-width: none; -ms-overflow-style: none;"
+                                    id="chat-users">
+                                </ul>
+                                <ul class="list-unstyled mb-0" hidden
+                                    style="overflow: hidden; scrollbar-width: none; -ms-overflow-style: none"
+                                    id="search-users">
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Переписка -->
+                    <div class="col-8 mt-3">
+                        <div style="height: 90vh; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none">
+                            <ul class="list-unstyled" style="-ms-overflow-style: none;" id="chat_messages">
+                            </ul>
+                        </div>
+                        <div style="height: 10vh; position: relative">
+                            <form id="message" method="post" action="" hidden>
+                                <div class="input-group mb-3 chat-zone" style="position:absolute; bottom: 10px;">
+                                    <textarea id="msg" maxlength="2048" type="text" class="form-control"
+                                              placeholder="Сообщение "></textarea>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <script>
+        const textarea = document.querySelector("textarea");
+        textarea.addEventListener("keyup", e => {
+            textarea.style.height = "59px";
+            let scHeight = e.target.scrollHeight;
+            textarea.style.height = `${scHeight}px`;
+        });
+    </script>
+    <script>
+
+
+        let wss
+        let chatComps = {}
+        let messagesNum = 0
+        let numOfUnreadMsgs = {}
+        let selected_chat
+        let users_list = document.querySelector('#chat-users')
+        let user_card = document.querySelector('#user-card')
+        let search_users = document.querySelector('#search-users')
+        let user
+
+
+        async function dialogSelected() {
+            try {
+                wss.close()
+            } catch (e) {
+
+            }
+            if (selected_chat !== undefined) {
+                selected_chat.style.backgroundColor = "";
+            }
+            selected_chat = this
+            let chat = document.querySelector('#chat_messages')
+            let messageArea = document.querySelector('#msg')
+            messageArea.addEventListener('keypress', sendMessage)
+            messageArea.closest("form").hidden = false
+            messageArea.value = ""
+            if (chat.children.length !== 0) {
+                while (chat.firstChild) {
+                    chat.firstChild.remove()
+                }
+            }
+            messagesNum = 0
+            this.style.backgroundColor = "#eee";
+            let id = this.id.replaceAll("JImwku2_", '')
+            wss = new WebSocket(`ws://${document.domain}:${location.port}/private/` + id)
+            wss.onopen = async (evt) => {
+                user['action'] = "connected"
+                wss.send(JSON.stringify(user))
+            }
+            wss.onmessage = (evt) => {
+                let messages = JSON.parse(evt.data)
+                messages.forEach((msg) => {
+                    let li = document.createElement("li");
+                    li.classList.add("d-flex", "mb-4");
+                    let card = document.createElement("div");
+                    card.classList.add("card");
+                    card.style.width = '40%'
+                    let cardHeader = document.createElement("div");
+                    cardHeader.classList.add("card-header", "d-flex", "justify-content-between", "p-3");
+                    let name = document.createElement("p");
+                    name.classList.add("fw-bold", "mb-0", "px-2");
+                    name.textContent = msg['sender_name'];
+                    name.style.color = 'black';
+                    name.style.fontWeight = 'bold'
+                    let time = document.createElement("p");
+                    time.classList.add("small", "mb-0");
+                    time.style.marginTop = "2px";
+                    time.textContent = msg['message_time'];
+                    time.style.color = 'black';
+                    let cardBody = document.createElement("div");
+                    cardBody.classList.add("card-body");
+                    let message = document.createElement("p");
+                    message.classList.add("mb-0");
+                    message.textContent = msg['content'];
+
+                    cardHeader.appendChild(name);
+                    cardHeader.appendChild(time);
+                    cardBody.appendChild(message);
+                    card.appendChild(cardHeader);
+                    card.appendChild(cardBody);
+                    li.appendChild(card);
+                    if (msg['owner'] === "you") {
+                        li.classList.add("justify-content-end",)
+                        cardHeader.style.backgroundColor = "rgba(44,111,187,0.97)";
+                    } else {
+                        li.classList.add("justify-content-between",)
+                    }
+                    chat.appendChild(li)
+                    chat.parentNode.scrollTop = chat.parentNode.scrollHeight
+                })
+
+            }
+            wss.onclose = async (ev) => {
+            }
+            wss.onerror = async (ev) => {
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function connect() {
+            user = {{ user|tojson }};
+            let num = 0;
+            const ws = new WebSocket(`ws://${document.domain}:${location.port}/` + user['id'])
+            ws.onopen = async (evt) => {
+                user['action'] = "connected"
+                ws.send(JSON.stringify(user))
+            }
+            ws.onmessage = async (evt) => {
+                let info = evt.data.split("|")
+                console.log(info[0])
+                let newMsg = false
+                let create = false
+                let read = false
+                let newMsgOwner
+                num += 1
+                if (info[0] === "companions") {
+                    let data = JSON.parse(info[1])
+                    let dictLen = Object.keys(chatComps).length
+                    for (let msg of data) {
+                        if (dictLen === 0) {
+                            chatComps[msg.companion_id] = msg.content
+                            numOfUnreadMsgs[msg.companion_id] = msg.not_seen
+                            create = true
+                        } else {
+                            if (chatComps[msg.companion_id] !== msg.content || chatComps[msg.companion_id] === undefined || numOfUnreadMsgs[msg.companion_id] < msg.not_seen) {
+                                chatComps[msg.companion_id] = msg.content
+                                numOfUnreadMsgs[msg.companion_id] = msg.not_seen
+                                newMsg = msg
+                                newMsgOwner = msg.companion_id
+                            } else if (numOfUnreadMsgs[msg.companion_id] > msg.not_seen && msg.not_seen === 0) {
+                                read = msg.companion_id
+                            }
+                        }
+                    }
+                    if (create || newMsg || read) {
+                        if (location.href.endsWith('/chat') || location.href.endsWith('/chat#!')) {
+                            if (newMsg) {
+                                let li = document.querySelector(`#JImwku2_${newMsgOwner}`)
+                                if (li === null) {
+                                    li = document.createElement("li");
+                                    li.classList.add("p-2", "border-bottom");
+                                    li.id = `JImwku2_${newMsg['companion_id']}`
+                                    // li.style.backgroundColor = "#eee";
+                                    let a = document.createElement("a");
+                                    a.href = "#!";
+                                    a.classList.add("d-flex", "justify-content-between", "text-decoration-none", "chat");
+                                    let div1 = document.createElement("div");
+                                    div1.classList.add("d-flex", "flex-row");
+                                    let img = document.createElement("img");
+                                    img.src = "/static/user.png";
+                                    img.alt = "avatar";
+                                    img.classList.add("rounded-circle", "d-flex", "align-self-center", "me-3", "shadow-1-strong");
+                                    img.width = "60%";
+                                    let div2 = document.createElement("div");
+                                    div2.classList.add("pt-1");
+                                    let p1 = document.createElement("p");
+                                    p1.classList.add("fw-bold", "mb-0");
+                                    p1.textContent = newMsg['companion_name'];
+                                    p1.id = `companion_name_${newMsg['companion_id']}`
+                                    let p2 = document.createElement("p");
+                                    p2.classList.add("small", "text-muted");
+                                    p2.textContent = newMsg['content'].slice(0, 15);
+                                    p2.id = `content_${newMsg['companion_id']}`
+                                    let div3 = document.createElement("div");
+                                    div3.classList.add("pt-1");
+                                    let p3 = document.createElement("p");
+                                    p3.classList.add("small", "text-muted", "mb-1");
+                                    p3.textContent = "";
+                                    p3.id = `seen_time_${newMsg['companion_id']}`
+                                    let span = document.createElement("span");
+                                    span.classList.add("badge", "bg-danger", "float-end");
+                                    span.textContent = newMsg['not_seen'];
+                                    span.id = `not_seen_${newMsg['companion_id']}`
+                                    div2.appendChild(p1);
+                                    div2.appendChild(p2);
+                                    div3.appendChild(p3);
+                                    div3.appendChild(span);
+                                    div1.appendChild(img);
+                                    div1.appendChild(div2);
+                                    a.appendChild(div1);
+                                    a.appendChild(div3);
+                                    li.appendChild(a);
+                                    li.addEventListener('click', dialogSelected)
+                                    users_list.appendChild(li)
+                                } else {
+                                    let compNameEl = document.querySelector(`#companion_name_${newMsg['companion_id']}`)
+                                    let contentEl = document.querySelector(`#content_${newMsg['companion_id']}`)
+                                    let not_seen = document.querySelector(`#not_seen_${newMsg['companion_id']}`)
+                                    compNameEl.innerHTML = newMsg['companion_name']
+                                    contentEl.innerHTML = newMsg['content'].slice(0, 15)
+                                    not_seen.innerHTML = newMsg['not_seen']
+                                    not_seen.hidden = newMsg['not_seen'] === 0
+                                }
+                                let first = users_list.children[0]
+                                users_list.insertBefore(li, first)
+                            }
+                            if (create) {
+                                for (let message of data) {
+                                    let li = document.createElement("li");
+                                    li.classList.add("p-2", "border-bottom");
+                                    li.id = `JImwku2_${message['companion_id']}`
+                                    //li.style.backgroundColor = "#eee";
+                                    let a = document.createElement("a");
+                                    a.href = "#!";
+                                    a.classList.add("d-flex", "justify-content-between", "text-decoration-none", "chat");
+                                    let div1 = document.createElement("div");
+                                    div1.classList.add("d-flex", "flex-row");
+                                    let img = document.createElement("img");
+                                    img.src = "/static/user.png";
+                                    img.alt = "avatar";
+                                    img.classList.add("rounded-circle", "d-flex", "align-self-center", "me-3", "shadow-1-strong");
+                                    img.width = "60";
+                                    let div2 = document.createElement("div");
+                                    div2.classList.add("pt-1");
+                                    let p1 = document.createElement("p");
+                                    p1.classList.add("fw-bold", "mb-0");
+                                    p1.textContent = message['companion_name'];
+                                    p1.id = `companion_name_${message['companion_id']}`
+                                    let p2 = document.createElement("p");
+                                    p2.classList.add("small", "text-muted");
+                                    p2.textContent = message['content'].slice(0, 15);
+                                    p2.id = `content_${message['companion_id']}`
+                                    let div3 = document.createElement("div");
+                                    div3.classList.add("pt-1");
+                                    let p3 = document.createElement("p");
+                                    p3.classList.add("small", "text-muted", "mb-1");
+                                    p3.textContent = "";
+                                    p3.id = `seen_time_${message['companion_id']}`
+                                    let span = document.createElement("span");
+                                    span.classList.add("badge", "bg-danger", "float-end");
+                                    span.textContent = message['not_seen'];
+                                    span.id = `not_seen_${message['companion_id']}`
+                                    if (message['not_seen'] === 0) {
+                                        span.hidden = true
+                                    }
+                                    div3.appendChild(span);
+                                    div2.appendChild(p1);
+                                    div2.appendChild(p2);
+                                    div3.appendChild(p3);
+                                    div1.appendChild(img);
+                                    div1.appendChild(div2);
+                                    a.appendChild(div1);
+                                    a.appendChild(div3);
+                                    li.appendChild(a);
+                                    li.addEventListener('click', dialogSelected)
+                                    users_list.appendChild(li)
+                                }
+                                user_card.appendChild(users_list)
+                            }
+                            if (read) {
+                                let not_seen = document.querySelector(`#not_seen_${read}`)
+                                not_seen.innerHTML = 0
+                                not_seen.hidden = true
+                                numOfUnreadMsgs[read] = 0
+                            }
+                        }
+                    }
+                }
+                if (info[0] === "users") {
+                    let data = JSON.parse(info[1])
+                    while (search_users.firstChild) {
+                        search_users.firstChild.remove()
+                    }
+                    for (let user of data) {
+                        let li = document.createElement("li");
+                        li.classList.add("p-2", "border-bottom");
+                        li.id = `JImwku2_${user['companion_id']}`
+                        // li.style.backgroundColor = "#eee";
+                        let a = document.createElement("a");
+                        a.href = "#!";
+                        a.classList.add("d-flex", "justify-content-between", "text-decoration-none", "chat");
+                        let div1 = document.createElement("div");
+                        div1.classList.add("d-flex", "flex-row");
+                        let img = document.createElement("img");
+                        img.src = "/static/user.png";
+                        img.alt = "avatar";
+                        img.classList.add("rounded-circle", "d-flex", "align-self-center", "me-3", "shadow-1-strong");
+                        img.width = "60";
+                        let div2 = document.createElement("div");
+                        div2.classList.add("pt-1");
+                        let p1 = document.createElement("p");
+                        p1.classList.add("fw-bold", "mb-0");
+                        p1.textContent = user['companion_name'];
+                        p1.id = `companion_name_${user['companion_id']}`
+                        let p2 = document.createElement("p");
+                        p2.classList.add("small", "text-muted");
+                        p2.textContent = user['content'].slice(0, 15);
+                        p2.id = `content_${user['companion_id']}`
+                        let div3 = document.createElement("div");
+                        div3.classList.add("pt-1");
+                        let p3 = document.createElement("p");
+                        p3.classList.add("small", "text-muted", "mb-1");
+                        p3.textContent = "";
+                        p3.id = `seen_time_${user['companion_id']}`
+                        let span = document.createElement("span");
+                        span.classList.add("badge", "bg-danger", "float-end");
+                        span.textContent = user['not_seen'];
+                        span.id = `not_seen_${user['companion_id']}`
+                        if (user['not_seen'] === 0) {
+                            span.hidden = true
+                        }
+                        div3.appendChild(span);
+                        div2.appendChild(p1);
+                        div2.appendChild(p2);
+                        div3.appendChild(p3);
+                        div1.appendChild(img);
+                        div1.appendChild(div2);
+                        a.appendChild(div1);
+                        a.appendChild(div3);
+                        li.appendChild(a);
+                        li.addEventListener('click', dialogSelected)
+                        search_users.appendChild(li)
+                    }
+                    user_card.appendChild(search_users)
+                }
+            }
+            ws.onclose = async (ev) => {
+                console.log("RECONNECTING")
+                // await connect()
+            }
+            ws.onerror = async (ev) => {
+                console.log("ERROR CONNECTING")
+                // await connect()
+            }
+
+            let search_bar = document.querySelector('#search_users')
+            if (search_bar !== undefined && search_bar !== null) {
+                search_bar.addEventListener('keyup', () => {
+                    if (search_bar.value !== undefined && search_bar.value !== "") {
+                        user['action'] = "search"
+                        user['message'] = search_bar.value
+                        ws.send(JSON.stringify(user))
+                        search_users.hidden = false
+                        users_list.hidden = true
+                    } else {
+                        search_users.hidden = true
+                        users_list.hidden = false
+                    }
+                })
+                search_bar.addEventListener('search', () => {
+                    search_users.hidden = true
+                    users_list.hidden = false
+                });
+            }
+        })
+
+        async function sendMessage(e) {
+            if (e.which === 13 && !e.shiftKey) {
+                e.preventDefault();
+                if (this.value !== "") {
+                    user['action'] = "send_message"
+                    user['text'] = this.value
+                    wss.send(JSON.stringify(user))
+                    this.value = ""
+                }
+            }
+        }
+
+        async function getMe() {
+            let response = await fetch("/getMe", {
+                method: 'POST'
+            })
+            return await response.json()
+        }
+    </script>
+{% endblock %}
