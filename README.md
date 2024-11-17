@@ -12,25 +12,26 @@ In Kazakhstan, there is a limited selection of localised solutions focused on pr
 Competitor Analysis
 
 Several popular messengers are available in Kazakhstan, such as WhatsApp, Telegram, and Signal. However, most of them either lack full localisation or fail to prioritise data security adequately.
-WhatsApp
+
+ WhatsApp
 
     Strengths: Large user base (over 2 billion users globally).
     Weaknesses: Limited privacy controls, user data may be shared with Meta companies.
     Advantage of Our Messenger: Flexible system for controlling access to files and personal information.
 
-Telegram
+ Telegram
 
     Strengths: Extensive functionality (channels, bots, saved messages).
     Weaknesses: Advertisements, which can be avoided by purchasing a Premium subscription.
     Advantage of Our Messenger: Simplified interface for privacy settings.
 
-Signal
+ Signal
 
     Strengths: Minimal user data collection (no activity logs, contacts, or metadata).
     Weaknesses: Outdated and less visually appealing interface.
     Advantage of Our Messenger: Modern, intuitive design.
 
-Project Audience
+ Project Audience
 
 Our app targets several user groups:
 
