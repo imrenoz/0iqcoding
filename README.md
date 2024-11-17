@@ -1,69 +1,55 @@
-Project proposal: Social Network
-Students names: I. Alim, K. Rasul, K. Amina
+Social Network Project
+
+Students Names: I. Alim, K. Rasul, K. Amina
 Group: CS-2303
-Group name: 0iq coding
-Topic: Social Network	
+Group Name: 0iq coding
+Topic: Social Network
+Project Relevance
 
+In today’s digital world, the security of personal information has become more critical than ever. With the continuous advancement of technology, the risk of data leaks increases, emphasizing the importance of secure communication and file storage. Inspired by Telegram’s approach to security and convenience, we aim to create a messaging platform that not only offers secure communication but also provides users with advanced file management features.
 
-Project relevance
-The modern world requires a high level of security for personal information. With the development of technology, users are increasingly faced with the risk of data leakage, which makes the security of communication and file storage paramount. We were inspired by Telegram's approach, which has become a benchmark of security and convenience for users around the world. However, in Kazakhstan, there remains a limited choice of localised solutions focused on privacy and customisation to national needs.
-
-We chose this topic to create an application that will not only provide secure communication, but also offer users convenient file management functionality. The project aims to be a new stage in the development of secure communications, combining local accessibility with international security standards.
-
-
+In Kazakhstan, there is a limited selection of localised solutions focused on privacy and customisation to meet national needs. Our goal is to develop an application that combines international security standards with local relevance, addressing the need for both secure communication and efficient file management.
 Competitor Analysis
 
-There are several popular messengers in Kazakhstan, including WhatsApp, Telegram, Signal. However, most of them are not fully localised or do not focus enough on data security.
-
+Several popular messengers are available in Kazakhstan, such as WhatsApp, Telegram, and Signal. However, most of them either lack full localisation or fail to prioritise data security adequately.
 WhatsApp
-Strengths: Huge user base (over 2 billion users worldwide).
-Weaknesses: Limited privacy controls: user data may be shared with Meta companies.
-Advantage of our messenger: A more flexible system for controlling access to files and personal information.
+
+    Strengths: Large user base (over 2 billion users globally).
+    Weaknesses: Limited privacy controls, user data may be shared with Meta companies.
+    Advantage of Our Messenger: Flexible system for controlling access to files and personal information.
 
 Telegram
-Strengths: Extensive functionality: channels, bots, saved messages.
-Weaknesses: Advetisements: can be solved by purchasing Premium subscription
-Advantage of our messenger: Simplified interface for privacy settings. 
 
-
-
+    Strengths: Extensive functionality (channels, bots, saved messages).
+    Weaknesses: Advertisements, which can be avoided by purchasing a Premium subscription.
+    Advantage of Our Messenger: Simplified interface for privacy settings.
 
 Signal
-Strengths: Minimal user data: activity logs, contacts and other metadata are not collected.
-Weaknesses: Outdated and less attractive interface.
-Advantage of our messenger: A more modern and intuitive design.
 
-Project audience
+    Strengths: Minimal user data collection (no activity logs, contacts, or metadata).
+    Weaknesses: Outdated and less visually appealing interface.
+    Advantage of Our Messenger: Modern, intuitive design.
 
-The target audience of our app is divided into several groups:
-Young people (16-30 years old):
-Main users of messengers.
-Looking for convenient, stylish and secure ways to communicate.
-Interested in the security of their data.
+Project Audience
 
-Business community:
-Companies that value the privacy of correspondence.
-Need the ability to securely share important documents.
+Our app targets several user groups:
 
-Government agencies:
-Focused on on-premises solutions to improve cybersecurity.
-Interested in data storage facilities in Kazakhstan.
+    Young People (16-30 years old):
+        Primary users of messengers.
+        Seek secure, stylish, and convenient communication methods.
+        Concerned about the security of their data.
 
-All Internet users who value privacy:
-People who want to secure their correspondence and documents.
+    Business Community:
+        Companies requiring private communication.
+        Need a secure platform to share important documents.
 
+    Government Agencies:
+        Focus on on-premises solutions to enhance cybersecurity.
+        Interested in data storage facilities within Kazakhstan.
 
+    General Internet Users Who Value Privacy:
+        People seeking secure communication and document management.
 
 Conclusion
 
-Our project aims to create a secure, modern and functional messaging and file management platform targeted at the Kazakhstani audience. We aim to provide users with a solution that combines international quality standards with local customisation and high security measures.
-
-
-
-
-
-
-
-
-
-
+Our project aims to build a secure, modern, and functional messaging and file management platform tailored to the Kazakhstani audience. We strive to offer a solution that combines international quality standards with local customization, providing high-level security for both communication and data storage.      
